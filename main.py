@@ -1,9 +1,9 @@
-from texttable import Texttable
+from tqdm import tqdm
 import numpy as np
 import math
 import re
 
-CFG_TARGET_SIMILARITY = 0.5 # [0.5 .. 1.0]
+CFG_TARGET_SIMILARITY = 0.9 # [0.5 .. 1.0]
 
 # database = {}
 # database['human'] = 'bebrabebrabra'
@@ -32,7 +32,7 @@ for small_key in small_map:
 	small = small_map[small_key]
 	set = []
 	print('=================================\nsmall = ' + small)
-	for big_key in database:
+	for big_key in tqdm(database):
 		big = database[big_key]
 		def calcDP(begin):
 			small_len = len(small)
