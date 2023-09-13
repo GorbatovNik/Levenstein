@@ -1,9 +1,12 @@
-from tqdm import tqdm
-import numpy as np
+# from tqdm import tqdm
+import multiprocessing as mp
+# import numpy as np
 import math
 import re
 
-CFG_TARGET_SIMILARITY = 0.9 # [0.5 .. 1.0]
+CFG_TARGET_SIMILARITY = 0.80 # [0.5 .. 1.0]
+CFG_DATABASE_PART = 1
+CFG_POOLS_CNT = 7
 
 # database = {}
 # database['human'] = 'bebrabebrabra'
@@ -25,14 +28,43 @@ def readChainsMap(path):
 			chainMap[titles[i]] = chains[i]
 	return chainMap
 
-small_map = readChainsMap("lab0.txt")
+# small_map = readChainsMap("lab0.txt")
 database = readChainsMap("uniprot_sprot.fasta")
+database_pools = []
+for i in range(CFG_POOLS_CNT):
+	database_pools.append({})
+# chains_in_pool_cnt = len(database) * CFG_DATABASE_PART / CFG_POOLS_CNT
+chain_number = 0
+for big_key in database:
+	database_pools[chain_number%CFG_POOLS_CNT][big_key] = database[big_key]
+	if chain_number > len(database) * CFG_DATABASE_PART:
+		break
+	chain_number+=1
+# print(str(CFG_POOLS_CNT) + ' pools made from ' + str(CFG_DATABASE_PART*100)\
+	#   + '% of the database.\nEach pool consists of ' + str(len(database_pools[0])) + " chains")
 
-for small_key in small_map:
-	small = small_map[small_key]
-	set = []
-	print('=================================\nsmall = ' + small)
-	for big_key in tqdm(database):
+# output = open("output.txt",)
+
+# for small_key in small_map:
+small = "MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHGKKVADALTNAVAHVDDMPNALSALSDLHAHKLRVDPVNFKLLSHCLLVTLAAHLPAEFTPAVHASLDKFLASVSTVLTSKYR"
+# merged_set = []
+print('=================================\nsmall = ' + small)
+
+def lol(database):
+	name_proc = mp.current_process().name
+	print(name_proc, len(database))
+	return [name_proc]
+
+def getSetForPool(database):
+	# 	database = tqdm(database)
+	pset = []
+	index = 0
+	databasesize = len(database)
+	for big_key in database:
+		# print(index)
+		index += 1
+		if  index%10 == 0:
+			print(mp.current_process().name + ': ' + str(index) + '/' + str(databasesize) + " " + str(len(pset)) + ' found')
 		big = database[big_key]
 		def calcDP(begin):
 			small_len = len(small)
@@ -85,7 +117,21 @@ for small_key in small_map:
 			if lev is None:
 				break
 			elif lev <= math.floor(len(small)*(1.0 - CFG_TARGET_SIMILARITY)):
-				set.append([lev, sub_big, big_key, begin])
+				pset.append([lev, sub_big, big_key, begin])
 			begin += 1
-	set.sort()
-	print(set)
+	return pset
+		
+
+if __name__ == '__main__':
+	mp.freeze_support()
+	with mp.Pool(CFG_POOLS_CNT) as pool:
+		list_of_sets = pool.map(getSetForPool, database_pools)
+		merged_set = []
+		for set1 in list_of_sets:
+			merged_set.extend(set1)
+		merged_set.sort()
+		output = open("output.txt", "w")
+		for entry in merged_set:
+			output.write(str(entry) + "\n")
+		output.close()
+		# print(merged_set)
