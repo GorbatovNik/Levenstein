@@ -82,22 +82,38 @@ def getSetForPool(database):
 			for i in range(1, small_len + 1):
 				for j in range(1, up_len + 1):
 					if small[i-1] == up[j-1]:
-						dp[i][j] = dp[i-1][j-1]
+						# dp[i][j] = dp[i-1][j-1]
+						cost = 0
 					else:
-						dp[i][j] = min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]) + 1
+						cost = 1
+					dp[i][j] = min(
+									dp[i-1][j] + 1,
+									dp[i][j-1] + 1,
+									dp[i-1][j-1] + cost
+								  )
+					if i>1 and j>1 and small[i-1] == up[j-2] and small[i-2] == up[j-1]:
+						dp[i][j] = min(dp[i][j], dp[i-2][j-2] + 1)
 
 			def addColumn(up_len, begin):
 				up_len += 1
 				if len(big) < begin + up_len:
 					return None
-
 				for i in range(small_len+1):
 					if i == 0:
 						dp[i].append(up_len)
-					elif small[i-1] == big[begin + up_len - 1]:
-						dp[i].append(dp[i-1][up_len-1])
 					else:
-						dp[i].append(min(dp[i-1][up_len], dp[i][up_len-1], dp[i-1][up_len-1]) + 1)
+						dp[i].append(0)
+						if small[i-1] == big[begin + up_len - 1]:
+							cost = 0
+						else:
+							cost = 1
+						dp[i][up_len] = min(
+									dp[i-1][up_len] + 1,
+									dp[i][up_len-1] + 1,
+									dp[i-1][up_len-1] + cost
+								  )
+						if i>1 and small[i-1] == big[begin + up_len-2] and small[i-2] == big[begin + up_len-1]:
+							dp[i][up_len] = min(dp[i][up_len], dp[i-2][up_len-2] + 1)
 
 				return up_len
 
@@ -134,4 +150,17 @@ if __name__ == '__main__':
 		for entry in merged_set:
 			output.write(str(entry) + "\n")
 		output.close()
+		unique = {}
+		for entry in merged_set:
+			if unique.get(entry[2]) is None or unique[entry[2]][0] > entry[0]:
+				unique[entry[2]] = entry
+		unique_list = []
+		for un in unique:
+			unique_list.append(unique[un])
+		unique_list.sort()
+		output_un = open("output_unique.txt", "w")
+		for un in unique_list:
+			output_un.write(str(un) + "\n")
+			
+		output_un.close()
 		# print(merged_set)
